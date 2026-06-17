@@ -1,0 +1,59 @@
+# 储液罐浮子高度时程识别 - 配置文件
+# 改参数无需改代码; 坐标基于 1280x720 视频
+
+video: 液面.mp4
+output_dir: output
+stride: 1                    # 每隔几帧处理 (1=全部60fps)
+
+# ---------- 浮子定义 (模板初始 ROI: x, y, w, h) ----------
+# 追踪器以首帧该区域为模板, 沿竖直(主)+水平(辅)搜索
+# rest_height_m: 该浮子静止时的真实高度(与罐壁刻度对齐), 用于锚定标定
+floats:
+  - name: left
+    roi: [150, 398, 95, 75]
+    rest_height_m: 2.0
+  - name: right
+    roi: [1022, 498, 118, 72]
+    rest_height_m: 2.0
+
+# ---------- 追踪参数 ----------
+tracker:
+  search_v: 70              # 竖直搜索带半径(px)
+  search_h: 18             # 水平搜索带半径(px)
+  min_conf: 0.35            # 匹配置信度下限, 低于则保持上一帧位置
+  template_frame: 0         # 用哪一帧建模板
+
+# ---------- 罐体几何 ----------
+tank:
+  diameter_m: 6.0
+
+# ---------- 高度标定 (斜拍: 浮子锚定 + 透视尺度) ----------
+# 浮子在导向杆上, 比罐壁更靠近相机, 斜拍下与墙面刻度存在视差偏移。
+# 故采用: 以浮子自身静止位置锚定 rest_height_m, 位移用该列墙面像素/米换算。
+calibration:
+  rest_seconds: 2.0           # 取视频开头这段(静止)的中值作为浮子静止基准
+  scale_factor: 1.0           # 像素/米 的整体微调系数(默认1.0; 杆比墙近时可略<1)
+  # 罐壁红色刻度线(像素/米 来源); 不同 x 处按锚点线性插值处理透视
+  anchors:
+    - name: left_pole
+      x: 243
+      marks:
+        - {height_m: 2.5, y: 275}
+        - {height_m: 2.0, y: 367}
+    - name: right_pole
+      x: 1140
+      marks:
+        - {height_m: 2.5, y: 344}
+        - {height_m: 2.0, y: 474}
+
+# ---------- 平滑与峰值检测 ----------
+analysis:
+  smooth_seconds: 0.15      # 时序低通平滑窗口(秒)
+  median_seconds: 0.05      # 中值去离群窗口(秒)
+  min_prominence_m: 0.015   # 峰的最小突出度(米)
+  min_peak_distance_s: 0.3  # 相邻峰最小间隔(秒)
+
+# ---------- 可视化 ----------
+visual:
+  draw_ref_lines: true      # 在标注视频画 2.0/2.5m 参考线
+  box_color: [0, 0, 255]
