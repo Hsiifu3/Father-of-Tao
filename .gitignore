@@ -14,3 +14,6 @@ tmp/
 
 # Claude Code 本地配置
 .claude/
+
+# 大体积视频(不上传)
+*.mp4
